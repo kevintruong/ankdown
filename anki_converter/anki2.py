@@ -1,13 +1,17 @@
 import json
 import os
 import sqlite3
+import tempfile
 from collections import OrderedDict
 from pathlib import Path
 from typing import Union
 from zipfile import ZipFile
+from markdownify import markdownify as md
 
 import pandas as pd
-from jinja2 import Template
+from jinja2 import Environment, FileSystemLoader
+
+from anki_converter import i18n
 
 
 class Anki2:
@@ -29,8 +33,8 @@ class Anki2:
                 model_cfg['fields'].append(each_column['name'])
         cards = pd.read_sql_query("""SELECT c.id,c.nid,c.did,n.mid,n.flds from cards c join notes n on c.nid = n.id """,
                                   con)
-        cards['flds'] = cards.apply(
-            lambda row: OrderedDict(zip(self.model[str(row.mid)]['fields'], row.flds.split('\x1f'))), axis=1)
+        cards['flds'] = cards.apply(lambda row: OrderedDict(zip(self.model[str(row.mid)]['fields'],
+                                                                row.flds.split('\x1f'))), axis=1)
 
         cards['deck_name'] = cards.apply(lambda row: decks[str(row.did)]['name'], axis=1)
         cards['model'] = cards.apply(lambda row: self.model[str(row.mid)]['fields'], axis=1)
@@ -39,10 +43,10 @@ class Anki2:
     def dump_cards_model(self, output):
 
         def dump_example_card_record():
-            pass
+            return i18n.t("info.template.comment")
 
         def dump_example():
-            pass
+            return i18n.t("info.template.example")
 
         for each_model, model_conf in self.model.items():
             with open(os.path.join(output, f"{each_model}.jinja2"), 'w') as template_file:
@@ -57,17 +61,19 @@ class Anki2:
 
 
 class Render:
-    def __init__(self, work_dir):
+    def __init__(self, work_dir, **kwargs):
         self.work_dir = work_dir
-        self.anki2 = Anki2(os.path.join(work_dir, "collection.anki2"))
+        self.includes = kwargs.get('includes', [])
+        self.anki2 = Anki2(os.path.join(work_dir, "anki2/collection.anki2"))
+        self.env = Environment(loader=FileSystemLoader([work_dir] + self.includes))
         self.templates = self.load_template()
-        pass
 
     def load_template(self):
         templates = {}
         for each_model, model_conf in self.anki2.model.items():
-            with open(os.path.join(self.work_dir, f"{each_model}.j2"), 'w') as template_file:
-                templates['each_model'] = Template(template_file.read())
+            model_template_file = f"{each_model}.jinja2"
+            if os.path.isfile(os.path.join(self.work_dir, model_template_file)):
+                templates[each_model] = self.env.get_template(model_template_file)
         return templates
 
     def export(self, type='markdown'):
@@ -75,9 +81,21 @@ class Render:
             return self.markdown_export()
         pass
 
-    def export_card(self, cards):
+    def export_card(self, card):
+        mid = card[1]['mid']
+        card_data = card[1]['flds']
 
-        pass
+        for key in card_data.keys():
+            card_data[key] = md(card_data[key])
+            if key == "Choices":
+                card_data[key] = card_data[key].split("/")
+        # card_data = {x:md(card_data[x]) for (x,_) in card_data.items()}
+        print(card_data)
+        ret = ""
+        template = self.templates.get(str(f'{card[1]["mid"]}'), None)
+        if template:
+            ret = template.render(card_data).lstrip().rstrip()
+        return ret
 
     def markdown_export(self):
         for each_cards in self.anki2.cards_by_decks:
@@ -105,7 +123,10 @@ class Apkg:
         Args:
             filename_or_dir (Union[str, Path]): Can be a *.apkg, or a folder name
         """
-
+        self.output = kwargs.get('output', tempfile.mkdtemp())
+        self.output = Path(self.output)
+        self.anki2 = self.output.joinpath('anki2')
+        os.makedirs(self.output, exist_ok=True)
         self.original = Path(filename_or_dir)
         if not self.original.is_dir():
             self.folder = self.original.with_suffix("")
@@ -126,12 +147,12 @@ class Apkg:
         # super().__init__(self.folder.joinpath("collection.anki20"), **kwargs)
 
     def _unzip(self):
-        if self.original.exists():
+        if self.output.exists():
             with ZipFile(self.original) as zf:
-                zf.extractall(self.folder)
+                zf.extractall(os.path.join(self.output, "anki2"))
 
     def get_anki2(self):
-        return Anki2(self.folder.joinpath("collection.anki2"))
+        return Anki2(self.anki2.joinpath("collection.anki2"))
 
     def markdown_dump(self, anki2_collection):
         anki2_collection: Anki2

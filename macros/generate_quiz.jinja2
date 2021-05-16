@@ -1,0 +1,7 @@
+{%- macro generate_quiz(question,options) %}
+{{ question }}
+
+{% for each_option in  options %}
+- [ ] {{ each_option }}
+{% endfor %}
+{%- endmacro -%}

@@ -1,6 +1,7 @@
 import json
 import os
 import sqlite3
+from collections import OrderedDict
 from pathlib import Path
 from typing import Union
 from zipfile import ZipFile
@@ -28,24 +29,31 @@ class Anki2:
                 model_cfg['fields'].append(each_column['name'])
         cards = pd.read_sql_query("""SELECT c.id,c.nid,c.did,n.mid,n.flds from cards c join notes n on c.nid = n.id """,
                                   con)
-        cards['deck_name'] = cards.apply(lambda row: decks[str(row.did)]['name'], axis=1)
+        cards['flds'] = cards.apply(
+            lambda row: OrderedDict(zip(self.model[str(row.mid)]['fields'], row.flds.split('\x1f'))), axis=1)
 
+        cards['deck_name'] = cards.apply(lambda row: decks[str(row.did)]['name'], axis=1)
         cards['model'] = cards.apply(lambda row: self.model[str(row.mid)]['fields'], axis=1)
         self.cards_by_decks = cards.groupby(cards.did)
 
     def dump_cards_model(self, output):
-        for each_model, model_conf in self.model.items():
-            with open(os.path.join(output, f"{each_model}.j2"), 'w') as template_file:
-                content = ""
 
+        def dump_example_card_record():
+            pass
+
+        def dump_example():
+            pass
+
+        for each_model, model_conf in self.model.items():
+            with open(os.path.join(output, f"{each_model}.jinja2"), 'w') as template_file:
+                content = ""
+                content += dump_example()
+                content += dump_example_card_record()
                 for each_field in model_conf['fields']:
                     content += f"{{{{ {each_field} }}}}\r\n"
                 template_file.write(content)
                 # frontmatter.dump(content, template_file)
                 # example records for a cards
-
-    def render_card(self):
-        pass
 
 
 class Render:
@@ -64,10 +72,17 @@ class Render:
 
     def export(self, type='markdown'):
         if type == 'markdown':
-            return
+            return self.markdown_export()
+        pass
+
+    def export_card(self, cards):
+
         pass
 
     def markdown_export(self):
+        for each_cards in self.anki2.cards_by_decks:
+            card = self.export_card(each_cards)
+            pass
         pass
 
 

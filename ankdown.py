@@ -1,7 +1,7 @@
 import os
 import click
-from anki_converter.anki2 import Apkg
-import anki_converter.anki2
+from ankdown.anki2 import Apkg
+import ankdown.anki2
 
 
 @click.group()

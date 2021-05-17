@@ -3,7 +3,7 @@ import unittest
 
 import mdformat
 
-from anki_converter.anki2 import Apkg, Render
+from ankdown.anki2 import Apkg, Render
 
 
 class TestApkgParser(unittest.TestCase):

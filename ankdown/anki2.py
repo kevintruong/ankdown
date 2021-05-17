@@ -11,7 +11,7 @@ from markdownify import markdownify as md
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader
 
-from anki_converter import i18n
+from ankdown import i18n
 
 
 class Anki2:

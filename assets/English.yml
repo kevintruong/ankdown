@@ -1,0 +1,66 @@
+info:
+  template:
+    comment: |+
+      {# please follow this guide to customize your template #}
+
+    example: |+
+
+      {#
+
+      comment
+
+      ## Model fields
+
+      cardname, image , audio , define, question, options  ... }
+      Example:
+        ```
+
+        ## {{ cardname }}
+
+        {{ image }}
+
+        ----
+
+        {{ audio }}
+
+        ----
+
+        {{ define }}
+
+        ----
+
+        {{ question }}
+
+        we can define macro here to process options values
+        {{ options }}
+
+      ```
+
+      ## {{ cardname }}
+
+      {{ image }}
+
+      ----
+
+      {{ audio }}
+
+      ----
+
+      {{ define }}
+
+      ----
+
+      %# {{ question }}
+
+      %# {{ options }}
+
+      {# we can define macro here to process options values
+
+      {% from 'generate_quiz.jinja2' import generate_quiz %}
+
+      {{ generate_quiz(Question ,Choices) }}
+
+      #}
+
+
+

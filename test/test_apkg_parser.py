@@ -8,8 +8,9 @@ from ankdown.anki2 import Apkg, Render
 
 class TestApkgParser(unittest.TestCase):
     def setUp(self) -> None:
-        test_file = "./English_Grammar_In_Use_Exercises.apkg"
-        self.output = './resource/test_apkg'
+        cur_dir = os.path.dirname(__file__)
+        test_file = os.path.join(cur_dir, "./resource/English_Grammar_In_Use_Exercises.apkg")
+        self.output = os.path.join(cur_dir, './resource/test_apkg')
         self.apkg = Apkg(test_file, output=self.output)
         self.anki2_structure = self.apkg.get_anki2()
 

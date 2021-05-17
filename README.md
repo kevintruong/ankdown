@@ -52,7 +52,7 @@ ankdown gen_template --apkg_file <anki apkg file> --output <output dir>
 ### Export markdown deck
 
 ```shell
-ankdown export --apkg_file <working dir> 
+ankdown export --work_dir <working dir> 
 ```
 
 Create new folder content the decks and its sub decks (if exists). the command will input template file and generate

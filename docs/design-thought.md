@@ -40,5 +40,6 @@ The process including 3 steps:
 
 * Generate model jinja2 template file from models in anki apkg
 * User custommizes the jinja2 template file.
-* Generate markdown decks based on custommized template file
+* Generate markdown decks based on customized template file
+
 

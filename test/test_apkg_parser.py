@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from jinja2 import Environment, FileSystemLoader
+import mdformat
 
 from anki_converter.anki2 import Apkg, Render
 
@@ -26,10 +26,14 @@ class TestApkgParser(unittest.TestCase):
                         includes=['/home/kevin/Project/Memflask/anki_convertor/macros'])
         for each_deck, deck in self.anki2_structure.cards_by_decks:
             deck_name = f'{deck.deck_name.values[0]}.md'
-            with open(os.path.join(self.output, deck_name), 'w') as deck_file:
+            deck_file = os.path.join(self.output, deck_name)
+            with open(deck_file, 'w') as deck_file_fd:
                 for card in deck.iterrows():
                     card_content = render.export_card(card)
                     print(card_content)
-                    deck_file.write("\r\n" + card_content)
+                    deck_file_fd.write("\r\n" + card_content)
+
+                # Input filepath as a string...
+            # mdformat.file(deck_file)
 
             pass

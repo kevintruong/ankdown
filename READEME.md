@@ -12,7 +12,7 @@ to markdown
 ### Generate deck template format file
 
 ```shell
-anki_converter gen_template --apkg_file <anki apkg file> --output <output dir> 
+ankdown gen_template --apkg_file <anki apkg file> --output <output dir> 
 ```
 
 * `gen_template` command to generate template decks markdown file format
@@ -52,7 +52,7 @@ anki_converter gen_template --apkg_file <anki apkg file> --output <output dir>
 ### Export markdown deck
 
 ```shell
-anki_converter export --apkg_file <working dir> 
+ankdown export --apkg_file <working dir> 
 ```
 
 Create new folder content the decks and its sub decks (if exists). the command will input template file and generate

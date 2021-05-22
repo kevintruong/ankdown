@@ -4,6 +4,12 @@
 {%- for each_option in  options %}
 {%- if each_option|length > 0 %}
 - [ ] {{ each_option }}
-{% endif %}
-{% endfor %}
+{%- endif %}
+{%- endfor %}
+{%- endmacro -%}
+
+{%- macro embedded_resources(resources) %}
+{%- if resources|length > 0 %}
+![ ]({{ resources }})
+{%- endif %}
 {%- endmacro -%}

@@ -1,0 +1,8 @@
+{%- macro embedded_audio(audio_file) %}
+{%- if audio_file|length > 0 %}
+<audio controls src="{{ audio_file }}">
+        Your browser does not support the
+        <code>{{ audio_file }}</code> element.
+</audio>
+{%- endif %}
+{%- endmacro -%}

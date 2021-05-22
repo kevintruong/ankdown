@@ -1,7 +1,8 @@
 import os
+
 import click
+
 from ankdown.anki2 import Apkg
-import ankdown.anki2
 
 
 @click.group()
@@ -17,7 +18,7 @@ def gen_template(apkg_file, output):
         raise Exception("Must apkg_file apkg file")
     if not os.path.exists(output):
         os.mkdir(output)
-    apkg = Apkg(apkg_file)
+    apkg = Apkg(apkg_file, output=output)
     anki2_structure = apkg.get_anki2()
     anki2_structure.dump_cards_model(output)
     pass

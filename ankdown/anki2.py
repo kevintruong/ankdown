@@ -12,6 +12,7 @@ import pandas as pd
 from jinja2 import Environment, FileSystemLoader
 
 from ankdown import i18n
+from anki.storage import Collection  # OK
 
 
 class Anki2:
@@ -40,6 +41,9 @@ class Anki2:
         cards['model'] = cards.apply(lambda row: self.model[str(row.mid)]['fields'], axis=1)
         self.cards_by_decks = cards.groupby(cards.did)
 
+    def dump_templates(self):
+        pass
+
     def dump_cards_model(self, output):
 
         def dump_example_card_record():
@@ -49,7 +53,9 @@ class Anki2:
             return i18n.t("info.template.example")
 
         for each_model, model_conf in self.model.items():
-            with open(os.path.join(output, f"{each_model}.jinja2"), 'w') as template_file:
+            model_dir = os.path.join(output, f'{each_model}')
+            os.makedirs(model_dir, exist_ok=True)
+            with open(os.path.join(model_dir, "model.jinja2"), 'w') as template_file:
                 content = ""
                 content += dump_example()
                 content += dump_example_card_record()
@@ -58,6 +64,20 @@ class Anki2:
                 template_file.write(content)
                 # frontmatter.dump(content, template_file)
                 # example records for a cards
+            template_configs = model_conf['tmpls']
+            for each_template_cfg in template_configs:
+                template_dir = os.path.join(model_dir, f"{each_template_cfg['name']}")
+                os.makedirs(template_dir, exist_ok=True)
+                if len(each_template_cfg['qfmt']) > 0:
+                    with open(os.path.join(template_dir, 'qfmt.html'), 'w') as asw_fd:
+                        asw_fd.write(each_template_cfg['qfmt'])
+                    with open(os.path.join(template_dir, 'qfmt.jinja2'), 'w') as asw_fd:
+                        pass
+                if len(each_template_cfg['afmt']) > 0:
+                    with open(os.path.join(template_dir, 'afmt.html'), 'w') as asw_fd:
+                        asw_fd.write(each_template_cfg['afmt'])
+                    with open(os.path.join(template_dir, 'afmt.jinja2'), 'w') as asw_fd:
+                        pass
 
 
 class Render:
@@ -65,15 +85,28 @@ class Render:
         self.work_dir = work_dir
         self.includes = kwargs.get('includes', [])
         self.anki2 = Anki2(os.path.join(work_dir, "anki2/collection.anki2"))
-        self.env = Environment(loader=FileSystemLoader([work_dir] + self.includes))
+        self.env = self.env_init()
         self.templates = self.load_template()
+
+    def env_init(self):
+        d = self.work_dir
+        subdirs = [x[0] for x in os.walk(d)]
+        return Environment(loader=FileSystemLoader([self.work_dir] + self.includes + subdirs))
 
     def load_template(self):
         templates = {}
         for each_model, model_conf in self.anki2.model.items():
-            model_template_file = f"{each_model}.jinja2"
-            if os.path.isfile(os.path.join(self.work_dir, model_template_file)):
-                templates[each_model] = self.env.get_template(model_template_file)
+            template_configs = model_conf['tmpls']
+            model_dir = os.path.join(self.work_dir, f'{each_model}')
+            templates[f'{each_model}'] = {}
+            template_by_model = templates[f'{each_model}']
+            for each_template_cfg in template_configs:
+                template_by_model[f"{each_template_cfg['name']}"] = {}
+                # template_dir = os.path.join(model_dir, f"{each_template_cfg['name']}")
+                if len(each_template_cfg['qfmt']) > 0:
+                    template_by_model[f"{each_template_cfg['name']}"]['qfmt'] = self.env.get_template('qfmt.jinja2')
+                if len(each_template_cfg['afmt']) > 0:
+                    template_by_model[f"{each_template_cfg['name']}"]['afmt'] = self.env.get_template('afmt.jinja2')
         return templates
 
     def export(self, type='markdown'):
@@ -128,31 +161,26 @@ class Apkg:
         self.anki2 = self.output.joinpath('anki2')
         os.makedirs(self.output, exist_ok=True)
         self.original = Path(filename_or_dir)
-        if not self.original.is_dir():
-            self.folder = self.original.with_suffix("")
-            self._unzip()
-        else:
-            self.folder = self.original
-        if not os.path.exists(self.folder):
-            os.mkdir(self.folder)
-
-        self.media_path = self.folder.joinpath("media")
-        if not self.media_path.exists():
-            self.media_path.write_text("{}")
-
-        # shutil.copy(
-        #     self.folder.joinpath("collection.anki2"),
-        #     self.folder.joinpath("collection.anki20"),
-        # )
-        # super().__init__(self.folder.joinpath("collection.anki20"), **kwargs)
+        self._unzip()
 
     def _unzip(self):
         if self.output.exists():
             with ZipFile(self.original) as zf:
                 zf.extractall(os.path.join(self.output, "anki2"))
 
+    def remap_media(self):
+        anki2_path = self.output.joinpath("anki2")
+        media_file = os.path.join(anki2_path,
+                                  "media")
+        with open(media_file, 'r') as media_fd:
+            media_config = json.load(media_fd)
+            for code, filename in media_config.items():
+                old_file_name = os.path.join(anki2_path, f"{code}")
+                new_file_name = os.path.join(anki2_path, filename)
+                os.rename(old_file_name, new_file_name)
+
     def get_anki2(self):
-        return Anki2(self.anki2.joinpath("collection.anki2"))
+        return Collection(os.path.join(self.anki2, "collection.anki2"))
 
     def markdown_dump(self, anki2_collection):
         anki2_collection: Anki2

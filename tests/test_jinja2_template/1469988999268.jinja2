@@ -1,0 +1,86 @@
+
+{#
+
+comment
+
+## Model fields
+
+cardname, image , audio , define, question, options  ... }
+Example:
+  ```
+
+  ## {{ cardname }}
+
+  {{ image }}
+
+  ----
+
+  {{ audio }}
+
+  ----
+
+  {{ define }}
+
+  ----
+
+  {{ question }}
+
+  we can define macro here to process options values
+  {{ options }}
+
+```
+
+## {{ cardname }}
+
+{{ image }}
+
+----
+
+{{ audio }}
+
+----
+
+{{ define }}
+
+----
+
+%# {{ question }}
+
+%# {{ options }}
+
+{# we can define macro here to process options values
+
+{% from 'generate_quiz.jinja2' import generate_quiz %}
+
+{{ generate_quiz(Question ,Choices) }}
+
+#}
+
+
+
+{# please follow this guide to customize your template #}
+
+{#{{ Id }}#}
+{{ Category }}
+{%- if Unit|length > 0 %}
+## {{ Unit }}
+{%- endif %}
+
+{%- if Rubric|length %}
+{{ Rubric }}
+
+{% endif %}
+{%- if Question|length > 0 %}
+{%- if Choices|length > 0 %}
+{%- from 'generate_quiz.jinja2' import generate_quiz %}
+{{- generate_quiz(Question ,Choices) }}
+{%- else %}
+{{ Question }}
+{%- endif %}
+{%- endif %}
+
+{#{{ Question }}#}
+{#{{ Choices }}#}
+{#{{ Image }}#}
+{#{{ Audio }}#}
+{#{{ AudioText }}#}

@@ -9,18 +9,20 @@ from ankdown.anki2 import Apkg, Render
 class TestApkgParser(unittest.TestCase):
     def setUp(self) -> None:
         cur_dir = os.path.dirname(__file__)
-        test_file = os.path.join(cur_dir, "./resource/English_Grammar_In_Use_Exercises.apkg")
-        self.output = os.path.join(cur_dir, './resource/test_apkg')
+        test_file = os.path.join(cur_dir, "../resource/English_Grammar_In_Use_Exercises.apkg")
+        self.output = os.path.join(cur_dir, '../resource/test_apkg')
         self.apkg = Apkg(test_file, output=self.output)
-        self.anki2_structure = self.apkg.get_anki2()
+        self.collection = self.apkg.get_anki2()
 
         pass
 
     def test_parse_apkg_file(self):
-        self.assertIsNotNone(self.anki2_structure)
+        self.assertIsNotNone(self.collection)
 
     def test_dump_model_template(self):
-        self.anki2_structure.dump_cards_model(self.output)
+
+        # self.collection.dump_cards_model(self.output)
+        pass
 
     def test_export_cards(self):
         render = Render(work_dir=self.output,
@@ -34,7 +36,6 @@ class TestApkgParser(unittest.TestCase):
                     print(card_content)
                     deck_file_fd.write("\r\n" + card_content)
 
-                # Input filepath as a string...
-            # mdformat.file(deck_file)
-
-            pass
+    def test_remap_media(self):
+        self.apkg.remap_media()
+        pass

@@ -3,7 +3,7 @@ import unittest
 
 import mdformat
 
-from ankdown.anki2 import Apkg, Render
+from ankdown.anki2 import Apkg, Render, MarkDownCardExporter
 
 
 class TestApkgParser(unittest.TestCase):
@@ -20,21 +20,14 @@ class TestApkgParser(unittest.TestCase):
         self.assertIsNotNone(self.collection)
 
     def test_dump_model_template(self):
-
         # self.collection.dump_cards_model(self.output)
         pass
 
     def test_export_cards(self):
-        render = Render(work_dir=self.output,
-                        includes=['/home/kevin/Project/Memflask/anki_convertor/macros'])
-        for each_deck, deck in self.anki2_structure.cards_by_decks:
-            deck_name = f'{deck.deck_name.values[0]}.md'
-            deck_file = os.path.join(self.output, deck_name)
-            with open(deck_file, 'w') as deck_file_fd:
-                for card in deck.iterrows():
-                    card_content = render.export_card(card)
-                    print(card_content)
-                    deck_file_fd.write("\r\n" + card_content)
+        md_exporter = MarkDownCardExporter(self.collection)
+        md_exporter.do_export_cards_by_deck('/tmp/')
+
+        pass
 
     def test_remap_media(self):
         self.apkg.remap_media()

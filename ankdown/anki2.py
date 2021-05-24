@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sqlite3
 import tempfile
 from collections import OrderedDict
@@ -12,7 +13,11 @@ import pandas as pd
 from jinja2 import Environment, FileSystemLoader
 
 from ankdown import i18n
+from anki.collection import _Collection
+from anki.exporting import Exporter
+from anki.lang import _
 from anki.storage import Collection  # OK
+from anki.utils import ids2str
 
 
 class Anki2:
@@ -55,37 +60,44 @@ class Anki2:
         for each_model, model_conf in self.model.items():
             model_dir = os.path.join(output, f'{each_model}')
             os.makedirs(model_dir, exist_ok=True)
-            with open(os.path.join(model_dir, "model.jinja2"), 'w') as template_file:
-                content = ""
-                content += dump_example()
-                content += dump_example_card_record()
-                for each_field in model_conf['fields']:
-                    content += f"{{{{ {each_field} }}}}\r\n"
-                template_file.write(content)
-                # frontmatter.dump(content, template_file)
-                # example records for a cards
+            # with open(os.path.join(model_dir, "model.jinja2"), 'w') as template_file:
+            #
             template_configs = model_conf['tmpls']
-            for each_template_cfg in template_configs:
-                template_dir = os.path.join(model_dir, f"{each_template_cfg['name']}")
+            for index, each_template_cfg in enumerate(template_configs):
+                template_dir = os.path.join(model_dir, f"{index}")
                 os.makedirs(template_dir, exist_ok=True)
                 if len(each_template_cfg['qfmt']) > 0:
                     with open(os.path.join(template_dir, 'qfmt.html'), 'w') as asw_fd:
                         asw_fd.write(each_template_cfg['qfmt'])
                     with open(os.path.join(template_dir, 'qfmt.jinja2'), 'w') as asw_fd:
+                        content = ""
+                        content += dump_example()
+                        content += dump_example_card_record()
+                        for each_field in model_conf['fields']:
+                            content += f"{{{{ {each_field} }}}}\r\n"
+                        asw_fd.write(content)
                         pass
                 if len(each_template_cfg['afmt']) > 0:
                     with open(os.path.join(template_dir, 'afmt.html'), 'w') as asw_fd:
                         asw_fd.write(each_template_cfg['afmt'])
                     with open(os.path.join(template_dir, 'afmt.jinja2'), 'w') as asw_fd:
+                        content = ""
+                        content += dump_example()
+                        content += dump_example_card_record()
+                        for each_field in model_conf['fields']:
+                            content += f"{{{{ {each_field} }}}}\r\n"
+                        asw_fd.write(content)
                         pass
 
 
 class Render:
-    def __init__(self, work_dir, **kwargs):
+    def __init__(self, work_dir, collection, **kwargs):
         self.work_dir = work_dir
         self.includes = kwargs.get('includes', [])
-        self.anki2 = Anki2(os.path.join(work_dir, "anki2/collection.anki2"))
+        self.collection = collection
         self.env = self.env_init()
+        col = pd.read_sql_query("SELECT models FROM col", self.collection.db._db)
+        self.model = json.loads(col.values[0][0])
         self.templates = self.load_template()
 
     def env_init(self):
@@ -95,12 +107,12 @@ class Render:
 
     def load_template(self):
         templates = {}
-        for each_model, model_conf in self.anki2.model.items():
+        for each_model, model_conf in self.collection.model.items():
             template_configs = model_conf['tmpls']
             model_dir = os.path.join(self.work_dir, f'{each_model}')
             templates[f'{each_model}'] = {}
             template_by_model = templates[f'{each_model}']
-            for each_template_cfg in template_configs:
+            for index, each_template_cfg in enumerate(template_configs):
                 template_by_model[f"{each_template_cfg['name']}"] = {}
                 # template_dir = os.path.join(model_dir, f"{each_template_cfg['name']}")
                 if len(each_template_cfg['qfmt']) > 0:
@@ -131,7 +143,7 @@ class Render:
         return ret
 
     def markdown_export(self):
-        for each_cards in self.anki2.cards_by_decks:
+        for each_cards in self.collection.cards_by_decks:
             card = self.export_card(each_cards)
             pass
         pass
@@ -190,3 +202,47 @@ class Apkg:
         for each_deck, cards_deck in anki2_collection.cards_by_decks:
             for each_card in cards_deck:
                 deck_file = os.path.join(dump_dir, f"{cards_deck.name}.md")
+
+
+class MarkDownCardExporter(Exporter):
+    key = _("Card in markdown format")
+    ext = ".md"
+    includeHTML = True
+
+    def __init__(self, col, render):
+        self.render = render
+        super().__init__(col)
+
+    def doExport(self, file):
+        ids = sorted(self.cardIds())
+        strids = ids2str(ids)
+
+        def esc(s):
+            # strip off the repeated question in answer if exists
+            s = re.sub("(?si)^.*<hr id=answer>\n*", "", s)
+            return self.processText(s)
+
+        out = ""
+        for cid in ids:
+            c = self.col.getCard(cid)
+            out += esc(c.q())
+            out += "\t" + esc(c.a()) + "\n"
+        file.write(out.encode("utf-8"))
+
+    def cardIdsGroupByDeckId(self):
+        cards = pd.read_sql_query("""SELECT c.id,c.nid,c.did,n.mid,n.flds from cards c join notes n on c.nid = n.id """,
+                                  self.col.db._db)
+        cards_by_decks = cards.groupby(cards.did)
+        # self.count = len(cids)
+        return cards_by_decks
+
+    def do_export_cards_by_deck(self, output_dir):
+        cards_list_by_deck = self.cardIdsGroupByDeckId()
+        for each_deck, cards_list in cards_list_by_deck:
+            deck = self.col.decks.get(int(each_deck))
+            deck_file = os.path.join(output_dir, f'{deck["name"]}.md')
+            with open(deck_file, 'w') as deck_file_df:
+                for index, each_card in cards_list.iterrows():
+                    card_render = self.col.getCard(each_card['id']).q()
+                    print(card_render)
+                    deck_file_df.write(card_render)
